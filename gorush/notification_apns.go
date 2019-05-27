@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/sideshow/apns2"
 	"github.com/sideshow/apns2/certificate"
 	"github.com/sideshow/apns2/payload"
@@ -148,9 +149,16 @@ func iosAlertDictionary(payload *payload.Payload, req PushNotification) *payload
 	}
 
 	// General
-
 	if len(req.Category) > 0 {
 		payload.Category(req.Category)
+	}
+
+	if len(req.Alert.SummaryArg) > 0 {
+		payload.AlertSummaryArg(req.Alert.SummaryArg)
+	}
+
+	if req.Alert.SummaryArgCount > 0 {
+		payload.AlertSummaryArgCount(req.Alert.SummaryArgCount)
 	}
 
 	return payload
@@ -190,7 +198,16 @@ func GetIOSNotification(req PushNotification) *apns2.Notification {
 		payload.MutableContent()
 	}
 
-	if _, ok := req.Sound.(Sound); ok {
+	switch req.Sound.(type) {
+	// from http request binding
+	case map[string]interface{}:
+		result := &Sound{}
+		_ = mapstructure.Decode(req.Sound, &result)
+		payload.Sound(result)
+	// from http request binding for non critical alerts
+	case string:
+		payload.Sound(&req.Sound)
+	case Sound:
 		payload.Sound(&req.Sound)
 	}
 

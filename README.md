@@ -1,9 +1,9 @@
 # gorush
 
-A push notification micro server using [Gin](https://github.com/gin-gonic/gin) framework written in Go (Golang).
+A push notification micro server using [Gin](https://github.com/gin-gonic/gin) framework written in Go (Golang) and see the [demo app](https://github.com/appleboy/flutter-gorush).
 
 [![GoDoc](https://godoc.org/github.com/appleboy/gorush?status.svg)](https://godoc.org/github.com/appleboy/gorush)
-[![Build Status](http://drone.wu-boy.com/api/badges/appleboy/gorush/status.svg)](http://drone.wu-boy.com/appleboy/gorush)
+[![Build Status](https://cloud.drone.io/api/badges/appleboy/gorush/status.svg)](https://cloud.drone.io/appleboy/gorush)
 [![Build status](https://ci.appveyor.com/api/projects/status/ka4hvplssp1q2s5u?svg=true)](https://ci.appveyor.com/project/appleboy/gorush-fp5dh)
 [![codecov](https://codecov.io/gh/appleboy/gorush/branch/master/graph/badge.svg)](https://codecov.io/gh/appleboy/gorush)
 [![Go Report Card](https://goreportcard.com/badge/github.com/appleboy/gorush)](https://goreportcard.com/report/github.com/appleboy/gorush)
@@ -15,32 +15,46 @@ A push notification micro server using [Gin](https://github.com/gin-gonic/gin) f
 
 ## Contents
 
-- [Support Platform](#support-platform)
-- [Features](#features)
-- [Memory Usage](#memory-usage)
-- [Basic Usage](#basic-usage)
-  - [Download a binary](#download-a-binary)
-  - [Install from source](#install-from-source)
-  - [Command Usage](#command-usage)
-  - [Send Android notification](#send-android-notification)
-  - [Send iOS notification](#send-ios-notification)
-- [Run gorush web server](#run-gorush-web-server)
-- [Web API](#web-api)
-  - [GET /api/stat/go](#get-apistatgo)
-  - [GET /api/stat/app](#get-apistatapp)
-  - [GET /sys/stats](#get-sysstats)
-  - [POST /api/push](#post-apipush)
-  - [Request body](#request-body)
-  - [iOS alert payload](#ios-alert-payload)
-  - [Android notification payload](#android-notification-payload)
-  - [iOS Example](#ios-example)
-  - [Android Example](#android-example)
-  - [Response body](#response-body)
-- [Run gRPC service](#run-grpc-service)
-- [Run gorush in Docker](#run-gorush-in-docker)
-- [Run gorush in Kubernetes](#run-gorush-in-kubernetes)
-- [Run gorush in AWS Lambda](#run-gorush-in-aws-lambda)
-- [License](#license)
+- [gorush](#gorush)
+  - [Contents](#contents)
+  - [Support Platform](#support-platform)
+  - [Features](#features)
+  - [Memory Usage](#memory-usage)
+  - [Basic Usage](#basic-usage)
+    - [Download a binary](#download-a-binary)
+    - [Install from source](#install-from-source)
+      - [Prerequisite Tools](#prerequisite-tools)
+      - [Fetch from GitHub](#fetch-from-github)
+    - [Command Usage](#command-usage)
+    - [Send Android notification](#send-android-notification)
+    - [Send iOS notification](#send-ios-notification)
+    - [Send Android or iOS notifications using Firebase](#send-android-or-ios-notifications-using-firebase)
+  - [Run gorush web server](#run-gorush-web-server)
+  - [Web API](#web-api)
+    - [GET /api/stat/go](#get-apistatgo)
+    - [GET /api/stat/app](#get-apistatapp)
+    - [GET /sys/stats](#get-sysstats)
+    - [GET /metrics](#get-metrics)
+    - [POST /api/push](#post-apipush)
+    - [Request body](#request-body)
+    - [iOS alert payload](#ios-alert-payload)
+    - [iOS sound payload](#ios-sound-payload)
+    - [Android notification payload](#android-notification-payload)
+    - [iOS Example](#ios-example)
+    - [Android Example](#android-example)
+    - [Response body](#response-body)
+  - [Run gRPC service](#run-grpc-service)
+  - [Run gorush in Docker](#run-gorush-in-docker)
+  - [Run gorush in Kubernetes](#run-gorush-in-kubernetes)
+    - [Quick Start](#quick-start)
+    - [Create the Service Controller for AWS ELB](#create-the-service-controller-for-aws-elb)
+    - [Ingress Controller for AWS ALB](#ingress-controller-for-aws-alb)
+    - [Clean up the gorush:](#clean-up-the-gorush)
+  - [Run gorush in AWS Lambda](#run-gorush-in-aws-lambda)
+    - [Build gorush binary](#build-gorush-binary)
+    - [Deploy gorush application](#deploy-gorush-application)
+  - [Stargazers over time](#stargazers-over-time)
+  - [License](#license)
 
 <a href="https://www.buymeacoffee.com/appleboy" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
 
@@ -304,6 +318,13 @@ $ gorush -ios -m "your message" -i "your certificate path" \
   -production
 ```
 
+### Send Android or iOS notifications using Firebase
+Send single notification with the following command:
+
+```bash
+$ gorush -android -m "your message" -k "API key" -t "Device token"
+```
+
 ## Run gorush web server
 
 Please make sure your [config.yml](config/config.yml) exist. Default port is `8088`.
@@ -449,6 +470,18 @@ Simple send Android notification example, the `platform` value is `2`:
   ]
 }
 ```
+Simple send notification on Android and iOS devices using Firebase, the `platform` value is `2`:
+```json
+{
+  "notifications": [
+    {
+      "tokens": ["token_a", "token_b"],
+      "platform": 2,
+      "message": "This notification will go to iOS and Android platform via Firebase!"
+    }
+  ]
+}
+```
 
 Send multiple notifications as below:
 
@@ -484,7 +517,7 @@ Request body must has a notifications array. The following is a parameter table 
 | name                    | type         | description                                                                                       | required | note                                                          |
 |-------------------------|--------------|---------------------------------------------------------------------------------------------------|----------|---------------------------------------------------------------|
 | tokens                  | string array | device tokens                                                                                     | o        |                                                               |
-| platform                | int          | platform(iOS,Android)                                                                             | o        | 1=iOS, 2=Android                                              |
+| platform                | int          | platform(iOS,Android)                                                                             | o        | 1=iOS, 2=Android (Firebase)                                   |
 | message                 | string       | message for notification                                                                          | -        |                                                               |
 | title                   | string       | notification title                                                                                | -        |                                                               |
 | priority                | string       | Sets the priority of the message.                                                                 | -        | `normal` or `high`                                            |
@@ -493,7 +526,7 @@ Request body must has a notifications array. The following is a parameter table 
 | data                    | string array | extensible partition                                                                              | -        |                                                               |
 | retry                   | int          | retry send notification if fail response from server. Value must be small than `max_retry` field. | -        |                                                               |
 | topic                   | string       | send messages to topics                                                                           |          |                                                               |
-| api_key                 | string       | Android api key                                                                                   | -        | only Android                                                  |
+| api_key                 | string       | api key for firebase cloud message                                                                                   | -        | only Android                                                  |
 | to                      | string       | The value must be a registration token, notification key, or topic.                               | -        | only Android                                                  |
 | collapse_key            | string       | a key for collapsing notifications                                                                | -        | only Android                                                  |
 | delay_while_idle        | bool         | a flag for device idling                                                                          | -        | only Android                                                  |
@@ -810,6 +843,7 @@ import (
 
 	"github.com/appleboy/gorush/rpc/proto"
 
+	structpb "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/grpc"
 )
 
@@ -839,6 +873,16 @@ func main() {
 			Subtitle: "Test Alert Sub Title",
 			LocKey:   "Test loc key",
 			LocArgs:  []string{"test", "test"},
+		},
+		Data: &structpb.Struct{
+			Fields: map[string]*structpb.Value{
+				"key1": {
+					Kind: &structpb.Value_StringValue{StringValue: "welcome"},
+				},
+				"key2": {
+					Kind: &structpb.Value_NumberValue{NumberValue: 2},
+				},
+			},
 		},
 	})
 	if err != nil {
@@ -900,6 +944,7 @@ import (
 
 	"github.com/appleboy/gorush/rpc/proto"
 
+	structpb "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/grpc"
 )
 
@@ -929,6 +974,16 @@ func main() {
 			Subtitle: "Test Alert Sub Title",
 			LocKey:   "Test loc key",
 			LocArgs:  []string{"test", "test"},
+		},
+		Data: &structpb.Struct{
+			Fields: map[string]*structpb.Value{
+				"key1": {
+					Kind: &structpb.Value_StringValue{StringValue: "welcome"},
+				},
+				"key2": {
+					Kind: &structpb.Value_NumberValue{NumberValue: 2},
+				},
+			},
 		},
 	})
 	if err != nil {

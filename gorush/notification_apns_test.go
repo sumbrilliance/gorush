@@ -126,12 +126,10 @@ func TestIOSSoundAndVolume(t *testing.T) {
 		Priority: "normal",
 		Message:  message,
 		Sound: Sound{
-			Critical: 2,
+			Critical: 3,
 			Name:     test,
-			Volume:   1.0,
+			Volume:   4.5,
 		},
-		SoundName:   "foo",
-		SoundVolume: 2.0,
 	}
 
 	notification := GetIOSNotification(req)
@@ -152,9 +150,104 @@ func TestIOSSoundAndVolume(t *testing.T) {
 	assert.Equal(t, test, notification.Topic)
 	assert.Equal(t, ApnsPriorityLow, notification.Priority)
 	assert.Equal(t, message, alert)
-	assert.Equal(t, "foo", soundName)
-	assert.Equal(t, 2.0, soundVolume)
+	assert.Equal(t, test, soundName)
+	assert.Equal(t, 4.5, soundVolume)
+	assert.Equal(t, int64(3), soundCritical)
+
+	req.SoundName = "foobar"
+	req.SoundVolume = 5.5
+	notification = GetIOSNotification(req)
+	dump, _ = json.Marshal(notification.Payload)
+	data = []byte(string(dump))
+
+	if err := json.Unmarshal(data, &dat); err != nil {
+		panic(err)
+	}
+
+	soundName, _ = jsonparser.GetString(data, "aps", "sound", "name")
+	soundVolume, _ = jsonparser.GetFloat(data, "aps", "sound", "volume")
+	soundCritical, _ = jsonparser.GetInt(data, "aps", "sound", "critical")
+	assert.Equal(t, 5.5, soundVolume)
 	assert.Equal(t, int64(1), soundCritical)
+	assert.Equal(t, "foobar", soundName)
+
+	req = PushNotification{
+		ApnsID:   test,
+		Topic:    test,
+		Priority: "normal",
+		Message:  message,
+		Sound: map[string]interface{}{
+			"critical": 3,
+			"name":     "test",
+			"volume":   4.5,
+		},
+	}
+
+	notification = GetIOSNotification(req)
+	dump, _ = json.Marshal(notification.Payload)
+	data = []byte(string(dump))
+
+	if err := json.Unmarshal(data, &dat); err != nil {
+		panic(err)
+	}
+
+	soundName, _ = jsonparser.GetString(data, "aps", "sound", "name")
+	soundVolume, _ = jsonparser.GetFloat(data, "aps", "sound", "volume")
+	soundCritical, _ = jsonparser.GetInt(data, "aps", "sound", "critical")
+	assert.Equal(t, 4.5, soundVolume)
+	assert.Equal(t, int64(3), soundCritical)
+	assert.Equal(t, "test", soundName)
+
+	req = PushNotification{
+		ApnsID:   test,
+		Topic:    test,
+		Priority: "normal",
+		Message:  message,
+		Sound:    "default",
+	}
+
+	notification = GetIOSNotification(req)
+	dump, _ = json.Marshal(notification.Payload)
+	data = []byte(string(dump))
+
+	if err := json.Unmarshal(data, &dat); err != nil {
+		panic(err)
+	}
+
+	soundName, _ = jsonparser.GetString(data, "aps", "sound")
+	assert.Equal(t, "default", soundName)
+}
+
+func TestIOSSummaryArg(t *testing.T) {
+	var dat map[string]interface{}
+
+	test := "test"
+	message := "Welcome notification Server"
+	req := PushNotification{
+		ApnsID:   test,
+		Topic:    test,
+		Priority: "normal",
+		Message:  message,
+		Alert: Alert{
+			SummaryArg:      "test",
+			SummaryArgCount: 3,
+		},
+	}
+
+	notification := GetIOSNotification(req)
+
+	dump, _ := json.Marshal(notification.Payload)
+	data := []byte(string(dump))
+
+	if err := json.Unmarshal(data, &dat); err != nil {
+		panic(err)
+	}
+
+	assert.Equal(t, test, notification.ApnsID)
+	assert.Equal(t, test, notification.Topic)
+	assert.Equal(t, ApnsPriorityLow, notification.Priority)
+	assert.Equal(t, "test", dat["aps"].(map[string]interface{})["alert"].(map[string]interface{})["summary-arg"])
+	assert.Equal(t, float64(3), dat["aps"].(map[string]interface{})["alert"].(map[string]interface{})["summary-arg-count"])
 }
 
 // Silent Notification which payload’s aps dictionary must not contain the alert, sound, or badge keys.
